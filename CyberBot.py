@@ -26,3 +26,4 @@ async def setchannel(interaction: discord.Interaction, channel: discord.TextChan
 
 
 
+bot.run(TOKEN)
