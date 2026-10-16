@@ -3,3 +3,7 @@ token.env
 __pycache__/
 credentials.json
 calendar_token.json
+<<<<<<< HEAD
+=======
+credentials.json.json
+>>>>>>> 4ae39d9bf958cb5fe85f5960ed3c1f88f2427cec
