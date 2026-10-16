@@ -7,7 +7,7 @@ load_dotenv('token.env')
 TOKEN = os.getenv('discord_token')
 
 
-bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
 bot_channel = {} #dictionary to store the bot channel for each guild
 
 @bot.tree.command ( 
@@ -22,6 +22,14 @@ async def setchannel(interaction: discord.Interaction, channel: discord.TextChan
         await interaction.response.send_message(f"Bot channel set to {channel.mention}", ephemeral=True)
     else:
         await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)  
+
+
+
+
+
+
+
+
 
 
 
