@@ -4,3 +4,5 @@ __pycache__/
 credentials.json
 calendar_token.json
 credentials.json.json
+data/store.json
+*.pyc
