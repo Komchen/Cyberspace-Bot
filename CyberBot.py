@@ -1,49 +1,77 @@
 import os
+
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-load_dotenv('token.env')
-TOKEN = os.getenv('discord_token')
+load_dotenv("token.env")
+TOKEN = os.getenv("discord_token")
 
-intents = discord.Intents.default()
-intents.message_content = True
-
-bot = commands.Bot(command_prefix='!', intents=intents)
-bot_channel = {} #dictionary to store the bot channel for each guild
-
-
-@bot.command(name="online", help="Check if the bot is online and working.")
-async def online(ctx: commands.Context):
-    await ctx.send("Online")
-
-
-@bot.command( name= "setchannel", help= "Set which channel the bot will send messages in")
-@commands.guild_only()
-async def setchannel(ctx: commands.Context, channel: discord.TextChannel):
-
-    if ctx.author.guild_permissions.administrator: #check to see if user has permission
-        bot_channel[ctx.guild.id] = channel.id
-        await ctx.send(f"Bot channel set to {channel.mention}")
-    else:
-        await ctx.send("You do not have administrator permission to use this command.")  
+EXTENSIONS = (
+    "cogs.basic",
+    "cogs.greetings",
+    "cogs.music",
+    "cogs.calendar_events",
+    "cogs.resources",
+    "cogs.roles",
+    "cogs.ctf",
+    "cogs.help_queue",
+    "cogs.infra",
+    "cogs.moderation",
+    "cogs.onboarding",
+    "cogs.rsvp",
+)
 
 
+class CyberBot(commands.Bot):
+    def __init__(self):
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.members = True
+        intents.voice_states = True
+        super().__init__(command_prefix="!", intents=intents)
+
+    async def setup_hook(self) -> None:
+        for extension in EXTENSIONS:
+            await self.load_extension(extension)
+            print(f"Loaded {extension}")
+
+    async def on_ready(self):
+        print(f"Logged in as {self.user} (id={self.user.id})")
+        await self.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.listening,
+                name="!clubhelp",
+            )
+        )
+
+    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        if isinstance(error, commands.CommandNotFound):
+            return
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("You don't have permission to use that command.")
+            return
+        if isinstance(error, commands.NoPrivateMessage):
+            await ctx.send("That command only works in a server.")
+            return
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(f"Missing argument. Try `!help {ctx.command}`.")
+            return
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(f"Bad argument. Try `!help {ctx.command}`.")
+            return
+        message = str(error) or "Something went wrong running that command."
+        await ctx.send(message)
 
 
+def main() -> None:
+    if not TOKEN:
+        raise SystemExit(
+            "Missing discord_token. Create token.env with: discord_token=YOUR_BOT_TOKEN"
+        )
+    bot = CyberBot()
+    bot.run(TOKEN)
 
 
-
-#killswitch command to stop the bot
-@bot.command(name="exit", help="Kills the bot")
-@commands.guild_only()
-@commands.has_guild_permissions(administrator=True)
-async def exit(ctx: commands.Context):
-    if ctx.author.guild_permissions.administrator: #check to see if user has permission
-        await ctx.send("Shutting down...")
-        await bot.close()
-    else:
-        await ctx.send("You do not have administrator permission to use this command.")
-
-
-bot.run(TOKEN)
+if __name__ == "__main__":
+    main()
