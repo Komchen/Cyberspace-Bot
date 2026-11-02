@@ -1,3 +1,4 @@
+from calendar import calendar
 import os
 from datetime import datetime, timezone
 
@@ -6,14 +7,14 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+CALENDAR_ID = "04a68f83eba04825174a7d7e2eee1b80f9df253f999b9649034b3264a3c42a56@group.calendar.google.com"
+
+CALENDAR_NAME = "Cyberspace Calendar"
 
 # Read-only access to Google Calendar
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly"
 ]
-
-# Calendar to retrieve events
-CALENDAR_ID = "primary"
 
 # File with saved Google auth
 TOKEN_FILE = "calendar_token.json"
@@ -38,7 +39,7 @@ def get_credentials():
     # Ask the user to authorize 
     if not creds or not creds.valid:
         flow = InstalledAppFlow.from_client_secrets_file(
-            "credentials.json.json", SCOPES
+            "credentials.json.", SCOPES
         )
 
         creds = flow.run_local_server(port=0)
@@ -53,20 +54,33 @@ creds = get_credentials()
 
 
 def get_next_event():
-# Gtes permission to access the calendar, then requests the next event,
-#  returns result ordred by starting time
-
-
-    # Get authorized Google credentials
     creds = get_credentials()
-
-    # Connect to Google Calendar API
     service = build("calendar", "v3", credentials=creds)
 
-    # Get current time in UTC
+    # Retrieve the specific shared calendar
+    print("Requested Calendar ID:", repr(CALENDAR_ID))
+
+    calendar = service.calendarList().get(
+        calendarId=CALENDAR_ID
+    ).execute()
+
+    print("Returned Calendar ID:", calendar.get("id"))
+    print("Calendar Name:", calendar.get("summary"))
+    print("Display Name:", calendar.get("summaryOverride"))
+
+    # Check the calendar's name
+    name = calendar.get("summaryOverride") or calendar.get("summary")
+
+    if name != CALENDAR_NAME:
+        raise ValueError(
+            f"Wrong calendar! Expected {CALENDAR_NAME}, found {name}"
+        )
+
+    print(f"Connected to: {name}")
+
+    # Retrieve upcoming events
     now = datetime.now(timezone.utc).isoformat()
 
-    # Ask Google for upcoming events
     results = service.events().list(
         calendarId=CALENDAR_ID,
         timeMin=now,
@@ -77,22 +91,20 @@ def get_next_event():
 
     events = results.get("items", [])
 
-    # No events found
-    if not events:
-        return None
-
-    # Return the first upcoming event
-    return events[0]
+    return events[0] if events else None
 
 
 
 
-#run w/o discord to test
 if __name__ == "__main__":
-    event = get_next_event()
+    try:
+        event = get_next_event()
 
-    if event:
-        print("Next event:", event.get("summary", "Untitled"))
-        print("Starts:", event["start"])
-    else:
-        print("No upcoming events!")
+        if event:
+            print("Next event:", event.get("summary", "Untitled"))
+            print("Starts:", event["start"])
+        else:
+            print("No upcoming events found!")
+
+    except Exception as error:
+        print(f"Error: {error}")
