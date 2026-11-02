@@ -2,6 +2,8 @@ import os
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from google_calendar import get_next_event
+import asyncio
 
 load_dotenv('token.env')
 TOKEN = os.getenv('discord_token')
@@ -28,7 +30,29 @@ async def setchannel(ctx: commands.Context, channel: discord.TextChannel):
     else:
         await ctx.send("You do not have administrator permission to use this command.")  
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~Google Calendar Commands~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+@bot.command(name="nextevent", help="Show the next Cyberspace Calendar event")
+async def event(ctx: commands.Context):
+
+    next_event = await asyncio.to_thread(get_next_event)
+
+    if next_event is None:
+        await ctx.send("📅 No upcoming Cyberspace events yet!")
+        return
+
+    title = next_event.get("summary", "Untitled Event")
+    start = next_event["start"].get(
+        "dateTime",
+        next_event["start"].get("date")
+    )
+
+    await ctx.send(
+        f"📅 **Next CYBERSPACE Event**\n"
+        f"**Event:** {title}\n"
+        f"**Starts:** {start}",
+        allowed_mentions=discord.AllowedMentions.none()
+    )
 
 
 
