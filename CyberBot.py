@@ -4,6 +4,10 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from google_calendar import get_next_event
 import asyncio
+from datetime import datetime, date
+from zoneinfo import ZoneInfo
+import html
+import re
 
 load_dotenv('token.env')
 TOKEN = os.getenv('discord_token')
@@ -32,27 +36,90 @@ async def setchannel(ctx: commands.Context, channel: discord.TextChannel):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~Google Calendar Commands~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@bot.command(name="nextevent", help="Show the next Cyberspace Calendar event")
+
+@bot.command(name="event", help="Show the next CYBERSPACE event")
 async def event(ctx: commands.Context):
 
     next_event = await asyncio.to_thread(get_next_event)
 
     if next_event is None:
-        await ctx.send("📅 No upcoming Cyberspace events yet!")
+        await ctx.send("No upcoming CYBERSPACE events found!")
         return
 
+    # Retrieve event information
     title = next_event.get("summary", "Untitled Event")
-    start = next_event["start"].get(
-        "dateTime",
-        next_event["start"].get("date")
+    description = next_event.get(
+        "description", "No description provided."
+    )
+    location = next_event.get("location", "Not specified")
+    start = next_event["start"]
+
+    # Google descriptions may contain HTML formatting
+    description = re.sub(r"<[^>]+>", "", description)
+    description = html.unescape(description).strip()
+    if not description:
+        description = "No description provided."
+
+    # Prevent extremely long descriptions from exceeding limits
+    description = description[:1000]
+
+    # Create Discord embed
+    embed = discord.Embed(
+        title="📅Next CyberSpace Event:",
+        description=f"**{title}**",
+        color=discord.Color.blurple()
     )
 
+    # Format the event date and time
+    if "dateTime" in start:
+        start_dt = datetime.fromisoformat(start["dateTime"])
+        timestamp = int(start_dt.timestamp())
+
+        embed.add_field(
+            name="📆Date & Time",
+            value=f"<t:{timestamp}:F>",
+            inline=False
+        )
+    else:
+        # Handle all-day calendar events
+        event_date = date.fromisoformat(start["date"])
+
+        embed.add_field(
+            name="📆 Date",
+            value=event_date.strftime("%A, %B %d, %Y"),
+            inline=False
+        )
+
+        embed.add_field(
+            name="⏰ Time",
+            value="All day",
+            inline=False
+        )
+
+    embed.add_field(
+        name="📝Description",
+        value=description,
+        inline=False
+    )
+
+    
+    # Include the Google Calendar event link
+    event_url = next_event.get("htmlLink")
+
+    if event_url:
+        embed.add_field(
+            name="Calendar Event",
+            value=f"[View Event]({event_url})",
+            inline=False
+        )
+
     await ctx.send(
-        f"📅 **Next CYBERSPACE Event**\n"
-        f"**Event:** {title}\n"
-        f"**Starts:** {start}",
+        embed=embed,
         allowed_mentions=discord.AllowedMentions.none()
     )
+
+    
+
 
 
 
